@@ -58,7 +58,8 @@ Response:
 
 1. Copy `.env.example` to `.env`
 2. Add Supabase and OpenAI credentials
-3. Run:
+3. If this API is called from a browser on another origin, set `CORS_ORIGIN` to that frontend origin. It defaults to `*`.
+4. Run:
 
 ```bash
 npm install

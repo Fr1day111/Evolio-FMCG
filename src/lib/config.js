@@ -10,6 +10,7 @@ function required(name, fallback = '') {
 
 export const config = {
   port: Number(process.env.PORT ?? 3000),
+  corsOrigin: process.env.CORS_ORIGIN ?? '*',
   openaiApiKey: required('OPENAI_API_KEY'),
   openaiModel: process.env.OPENAI_MODEL ?? 'gpt-5-mini',
   supabaseUrl: required('SUPABASE_URL'),
