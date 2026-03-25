@@ -5,9 +5,9 @@ function businessDateUtc() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export async function getOrderForSenderToday(senderId) {
+async function getOrderForSenderTodayFromTable(senderId, tableName) {
   const { data, error } = await supabase
-    .from(config.ordersTable)
+    .from(tableName)
     .select('*')
     .eq('sender_id', senderId)
     .eq('business_date', businessDateUtc())
@@ -22,7 +22,14 @@ export async function getOrderForSenderToday(senderId) {
   return data;
 }
 
-export async function upsertOrderSnapshot({ senderId, channel, order, summary, sourceMessageIds }) {
+async function upsertOrderSnapshotToTable({
+  senderId,
+  channel,
+  order,
+  summary,
+  sourceMessageIds,
+  tableName
+}) {
   const payload = {
     sender_id: senderId,
     channel,
@@ -34,7 +41,7 @@ export async function upsertOrderSnapshot({ senderId, channel, order, summary, s
   };
 
   const { data, error } = await supabase
-    .from(config.ordersTable)
+    .from(tableName)
     .upsert(payload, {
       onConflict: 'sender_id,business_date'
     })
@@ -48,12 +55,13 @@ export async function upsertOrderSnapshot({ senderId, channel, order, summary, s
   return data;
 }
 
-export async function insertInterpretationRecord({
+async function insertInterpretationRecordToTable({
   senderId,
   channel,
   orderId,
   sourceMessages,
-  aiResult
+  aiResult,
+  tableName
 }) {
   const payload = {
     sender_id: senderId,
@@ -68,7 +76,7 @@ export async function insertInterpretationRecord({
   };
 
   const { data, error } = await supabase
-    .from(config.interpretationsTable)
+    .from(tableName)
     .insert(payload)
     .select()
     .single();
@@ -78,4 +86,40 @@ export async function insertInterpretationRecord({
   }
 
   return data;
+}
+
+export async function getOrderForSenderToday(senderId) {
+  return getOrderForSenderTodayFromTable(senderId, config.ordersTable);
+}
+
+export async function getEmailOrderForSenderToday(senderId) {
+  return getOrderForSenderTodayFromTable(senderId, config.emailOrdersTable);
+}
+
+export async function upsertOrderSnapshot(params) {
+  return upsertOrderSnapshotToTable({
+    ...params,
+    tableName: config.ordersTable
+  });
+}
+
+export async function upsertEmailOrderSnapshot(params) {
+  return upsertOrderSnapshotToTable({
+    ...params,
+    tableName: config.emailOrdersTable
+  });
+}
+
+export async function insertInterpretationRecord(params) {
+  return insertInterpretationRecordToTable({
+    ...params,
+    tableName: config.interpretationsTable
+  });
+}
+
+export async function insertEmailInterpretationRecord(params) {
+  return insertInterpretationRecordToTable({
+    ...params,
+    tableName: config.emailInterpretationsTable
+  });
 }

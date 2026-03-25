@@ -15,8 +15,12 @@ export const config = {
   openaiModel: process.env.OPENAI_MODEL ?? 'gpt-5-mini',
   supabaseUrl: required('SUPABASE_URL'),
   supabaseServiceRoleKey: required('SUPABASE_SERVICE_ROLE_KEY'),
-  sourceMessagesTable: process.env.SOURCE_MESSAGES_TABLE ?? 'customer_messages',
+  sourceMessagesTable: process.env.SOURCE_MESSAGES_TABLE ?? 'messages',
+  sourceEmailsTable: process.env.SOURCE_EMAILS_TABLE ?? 'email',
   ordersTable: process.env.ORDERS_TABLE ?? 'live_orders',
+  emailOrdersTable: process.env.EMAIL_ORDERS_TABLE ?? 'live_email_orders',
   interpretationsTable:
-    process.env.ORDER_INTERPRETATIONS_TABLE ?? 'order_message_interpretations'
+    process.env.ORDER_INTERPRETATIONS_TABLE ?? 'order_message_interpretations',
+  emailInterpretationsTable:
+    process.env.EMAIL_INTERPRETATIONS_TABLE ?? 'email_order_interpretations'
 };
