@@ -57,6 +57,33 @@ Response:
 }
 ```
 
+Before AI order extraction, the WhatsApp and email endpoints load saved
+client-product mappings for that sender and pass them as `known_products` to the
+model. The model returns each order item with a `known_product_match` proposal.
+The backend still verifies that proposal against Supabase before deciding
+whether an item is known or new. Verified items are returned in
+`product_resolution.known_items`; new items are searched on Parmashop and
+returned in `product_resolution.new_items`.
+
+`POST /api/orders/product-mappings`
+
+Stores a confirmed Parmashop product match for a sender and normalized product
+query.
+
+Request:
+
+```json
+{
+  "sender_id": "whatsapp:+9779800000000",
+  "source_product_name": "cola",
+  "normalized_query": "cola",
+  "parmashop_product_id": "123",
+  "parmashop_sku": "FRK4SGR",
+  "parmashop_name": "Cola Franklin&Sons 200ml",
+  "parmashop_url": "https://www.parmashop.ro/cola-franklinsons-200ml"
+}
+```
+
 ## Assumptions in this first version
 
 - Message and email grouping is based on the current UTC day because your requirement says fetch the sender's whole-day history.
@@ -72,8 +99,10 @@ Response:
 1. Copy `.env.example` to `.env`
 2. Add Supabase and OpenAI credentials
 3. If this API is called from a browser on another origin, set `CORS_ORIGIN` to that frontend origin. It defaults to `*`.
-4. If needed, set `SOURCE_EMAILS_TABLE` to your email table name. It defaults to `customer_emails`.
-5. Run:
+4. If needed, set `SOURCE_EMAILS_TABLE` to your email table name. It defaults to `email`.
+5. If needed, set `PRODUCT_MAPPINGS_TABLE` to your confirmed product mapping
+   table name. It defaults to `client_product_mappings`.
+6. Run:
 
 ```bash
 npm install
@@ -162,4 +191,25 @@ create table public.email_order_interpretations (
 
 create index idx_email_order_interpretations_sender
   on public.email_order_interpretations (sender_id, created_at desc);
+```
+
+`client_product_mappings`
+
+```sql
+create table public.client_product_mappings (
+  id bigint generated always as identity primary key,
+  sender_id text not null,
+  source_product_name text not null,
+  normalized_query text not null,
+  parmashop_product_id text not null,
+  parmashop_sku text,
+  parmashop_name text not null,
+  parmashop_url text not null,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  unique (sender_id, normalized_query)
+);
+
+create index idx_client_product_mappings_sender
+  on public.client_product_mappings (sender_id);
 ```

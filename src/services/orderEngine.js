@@ -4,7 +4,9 @@ import {
   insertInterpretationRecord,
   upsertOrderSnapshot
 } from '../db/ordersRepo.js';
+import { getAllProductMappingsForSender } from '../db/productMappingsRepo.js';
 import { interpretOrderFromMessages } from './aiInterpreter.js';
+import { resolveOrderProducts } from './productResolution.js';
 
 export async function processSenderOrderDay(senderId) {
   if (!senderId) {
@@ -24,11 +26,13 @@ export async function processSenderOrderDay(senderId) {
   const existingOrderRecord = await getOrderForSenderToday(senderId);
   const existingOrder = existingOrderRecord?.order_json ?? [];
   const channel = messages[messages.length - 1]?.channel ?? null;
+  const knownProducts = await getAllProductMappingsForSender(senderId);
 
   // Recompute the authoritative order from the full day history on every hit.
   const aiResult = await interpretOrderFromMessages({
     senderId,
     existingOrder,
+    knownProducts,
     messages
   });
 
@@ -47,6 +51,11 @@ export async function processSenderOrderDay(senderId) {
     sourceMessages: messages,
     aiResult
   });
+  const productResolution = await resolveOrderProducts({
+    senderId,
+    order: aiResult.order,
+    knownProducts
+  });
 
   return {
     sender_id: senderId,
@@ -55,6 +64,7 @@ export async function processSenderOrderDay(senderId) {
     interpretation_id: interpretationRecord.id,
     summary: aiResult.summary,
     order: aiResult.order,
-    actions: aiResult.actions
+    actions: aiResult.actions,
+    product_resolution: productResolution
   };
 }

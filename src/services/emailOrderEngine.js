@@ -4,7 +4,9 @@ import {
   insertEmailInterpretationRecord,
   upsertEmailOrderSnapshot
 } from '../db/ordersRepo.js';
+import { getAllProductMappingsForSender } from '../db/productMappingsRepo.js';
 import { interpretOrderFromMessages } from './aiInterpreter.js';
+import { resolveOrderProducts } from './productResolution.js';
 
 export async function processSenderEmailOrderDay(senderId) {
   if (!senderId) {
@@ -24,10 +26,12 @@ export async function processSenderEmailOrderDay(senderId) {
   const existingOrderRecord = await getEmailOrderForSenderToday(senderId);
   const existingOrder = existingOrderRecord?.order_json ?? [];
   const channel = 'email';
+  const knownProducts = await getAllProductMappingsForSender(senderId);
 
   const aiResult = await interpretOrderFromMessages({
     senderId,
     existingOrder,
+    knownProducts,
     messages: emails
   });
 
@@ -46,6 +50,11 @@ export async function processSenderEmailOrderDay(senderId) {
     sourceMessages: emails,
     aiResult
   });
+  const productResolution = await resolveOrderProducts({
+    senderId,
+    order: aiResult.order,
+    knownProducts
+  });
 
   return {
     sender_id: senderId,
@@ -54,6 +63,7 @@ export async function processSenderEmailOrderDay(senderId) {
     interpretation_id: interpretationRecord.id,
     summary: aiResult.summary,
     order: aiResult.order,
-    actions: aiResult.actions
+    actions: aiResult.actions,
+    product_resolution: productResolution
   };
 }

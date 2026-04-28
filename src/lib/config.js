@@ -19,6 +19,8 @@ export const config = {
   sourceEmailsTable: process.env.SOURCE_EMAILS_TABLE ?? 'email',
   ordersTable: process.env.ORDERS_TABLE ?? 'live_orders',
   emailOrdersTable: process.env.EMAIL_ORDERS_TABLE ?? 'live_email_orders',
+  productMappingsTable:
+    process.env.PRODUCT_MAPPINGS_TABLE ?? 'client_product_mappings',
   interpretationsTable:
     process.env.ORDER_INTERPRETATIONS_TABLE ?? 'order_message_interpretations',
   emailInterpretationsTable:

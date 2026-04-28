@@ -5,10 +5,27 @@ import {
   ORDER_INTERPRETATION_SCHEMA
 } from '../prompts/orderInterpreterPrompt.js';
 
-export async function interpretOrderFromMessages({ senderId, existingOrder, messages }) {
+function serializeKnownProduct(mapping) {
+  return {
+    normalized_query: mapping.normalized_query,
+    source_product_name: mapping.source_product_name,
+    parmashop_product_id: mapping.parmashop_product_id,
+    parmashop_sku: mapping.parmashop_sku,
+    parmashop_name: mapping.parmashop_name,
+    parmashop_url: mapping.parmashop_url
+  };
+}
+
+export async function interpretOrderFromMessages({
+  senderId,
+  existingOrder,
+  messages,
+  knownProducts
+}) {
   const payload = {
     sender_id: senderId,
     existing_order: existingOrder ?? [],
+    known_products: (knownProducts ?? []).map(serializeKnownProduct),
     messages: messages.map((message) => ({
       source_message_id: String(message.id),
       channel: message.channel ?? null,
