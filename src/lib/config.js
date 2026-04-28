@@ -17,6 +17,8 @@ export const config = {
   supabaseServiceRoleKey: required('SUPABASE_SERVICE_ROLE_KEY'),
   sourceMessagesTable: process.env.SOURCE_MESSAGES_TABLE ?? 'messages',
   sourceEmailsTable: process.env.SOURCE_EMAILS_TABLE ?? 'email',
+  productCategoriesTable: process.env.PRODUCT_CATEGORIES_TABLE ?? 'product_categories',
+  productsTable: process.env.PRODUCTS_TABLE ?? 'products',
   ordersTable: process.env.ORDERS_TABLE ?? 'live_orders',
   emailOrdersTable: process.env.EMAIL_ORDERS_TABLE ?? 'live_email_orders',
   interpretationsTable:

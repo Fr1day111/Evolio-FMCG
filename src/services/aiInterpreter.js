@@ -5,7 +5,11 @@ import {
   ORDER_INTERPRETATION_SCHEMA
 } from '../prompts/orderInterpreterPrompt.js';
 
-export async function interpretOrderFromMessages({ senderId, existingOrder, messages }) {
+export async function interpretOrderFromMessages({
+  senderId,
+  existingOrder,
+  messages
+}) {
   const payload = {
     sender_id: senderId,
     existing_order: existingOrder ?? [],
