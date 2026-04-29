@@ -4,6 +4,7 @@ Node.js service that rebuilds a sender's live order from same-day WhatsApp messa
 
 ## Flow
 
+
 1. n8n receives a WhatsApp or email message.
 2. n8n stores raw messages and emails in Supabase.
 3. n8n calls the matching API with `sender_id`.
