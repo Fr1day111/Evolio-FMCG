@@ -17,6 +17,7 @@ export function normalizeProductQuery(productName) {
 function serializeMapping(mapping) {
   return {
     id: mapping.id,
+    source: mapping.source ?? 'supabase',
     sender_id: mapping.sender_id,
     source_product_name: mapping.source_product_name,
     normalized_query: mapping.normalized_query,
@@ -24,12 +25,25 @@ function serializeMapping(mapping) {
     parmashop_sku: mapping.parmashop_sku,
     parmashop_name: mapping.parmashop_name,
     parmashop_url: mapping.parmashop_url,
+    product_id: mapping.product_id,
+    product_code: mapping.product_code,
+    product_name: mapping.product_name,
+    unit: mapping.unit,
+    first_ordered_at: mapping.first_ordered_at,
+    last_ordered_at: mapping.last_ordered_at,
+    times_ordered: mapping.times_ordered,
+    total_quantity: mapping.total_quantity,
     created_at: mapping.created_at,
     updated_at: mapping.updated_at
   };
 }
 
-export async function resolveOrderProducts({ senderId, order, knownProducts }) {
+export async function resolveOrderProducts({
+  senderId,
+  order,
+  knownProducts,
+  useSupabaseFallback = true
+}) {
   const items = (order ?? [])
     .map((item) => ({
       orderItem: item,
@@ -63,14 +77,19 @@ export async function resolveOrderProducts({ senderId, order, knownProducts }) {
     .filter(Boolean);
   const exactQueries = items.map((item) => item.query);
   const availableMappings =
-    knownProducts ?? (await getProductMappingsForSender(senderId, [
-      ...proposedKnownQueries,
-      ...exactQueries
-    ]));
+    knownProducts ??
+    (useSupabaseFallback
+      ? await getProductMappingsForSender(senderId, [
+          ...proposedKnownQueries,
+          ...exactQueries
+        ])
+      : []);
   const missingQueries = [...new Set([...proposedKnownQueries, ...exactQueries])].filter(
     (query) => !availableMappings.some((mapping) => mapping.normalized_query === query)
   );
-  const fetchedMissingMappings = await getProductMappingsForSender(senderId, missingQueries);
+  const fetchedMissingMappings = useSupabaseFallback
+    ? await getProductMappingsForSender(senderId, missingQueries)
+    : [];
   const mappings = [...availableMappings, ...fetchedMissingMappings];
   const mappingsByQuery = new Map(
     mappings.map((mapping) => [mapping.normalized_query, mapping])

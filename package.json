@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
+    "import:nibo": "node scripts/import-nibo-orders.js",
     "test": "node --test"
   },
   "dependencies": {

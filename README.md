@@ -214,3 +214,146 @@ create table public.client_product_mappings (
 create index idx_client_product_mappings_sender
   on public.client_product_mappings (sender_id);
 ```
+
+`erp_clients`
+
+Stores Nibo/ERP clients. `phone` can be null until it becomes available;
+`normalized_phone` is used later to match WhatsApp sender IDs.
+
+```sql
+create table public.erp_clients (
+  id bigint generated always as identity primary key,
+  erp_code text not null unique,
+  client_id text,
+  company_id bigint,
+  erp_partner_id text,
+  name text,
+  cui text,
+  phone text,
+  normalized_phone text,
+  email text,
+  contact_person text,
+  address text,
+  city text,
+  county text,
+  raw_client_json jsonb not null default '{}'::jsonb,
+  last_seen_at timestamptz,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+create index idx_erp_clients_normalized_phone
+  on public.erp_clients (normalized_phone)
+  where normalized_phone is not null;
+```
+
+`erp_orders`
+
+```sql
+create table public.erp_orders (
+  id bigint generated always as identity primary key,
+  order_id text not null unique,
+  source_id text,
+  erp_code text not null references public.erp_clients(erp_code) on delete cascade,
+  client_id text,
+  status text,
+  order_created_at timestamptz,
+  order_updated_at timestamptz,
+  raw_order_json jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
+create index idx_erp_orders_erp_code
+  on public.erp_orders (erp_code, order_created_at desc);
+```
+
+`erp_order_items`
+
+```sql
+create table public.erp_order_items (
+  id bigint generated always as identity primary key,
+  order_id text not null references public.erp_orders(order_id) on delete cascade,
+  erp_code text not null references public.erp_clients(erp_code) on delete cascade,
+  product_id text,
+  product_code text not null,
+  product_name text not null,
+  quantity numeric not null default 0,
+  unit text,
+  raw_item_json jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  unique (order_id, product_code)
+);
+
+create index idx_erp_order_items_erp_code
+  on public.erp_order_items (erp_code);
+
+create index idx_erp_order_items_product_code
+  on public.erp_order_items (product_code);
+```
+
+`erp_client_products`
+
+Stores one unique product row per ERP client. This is the historical product
+list used later for matching.
+
+```sql
+create table public.erp_client_products (
+  id bigint generated always as identity primary key,
+  erp_code text not null references public.erp_clients(erp_code) on delete cascade,
+  product_id text,
+  product_code text not null,
+  product_name text not null,
+  unit text,
+  first_ordered_at timestamptz,
+  last_ordered_at timestamptz,
+  times_ordered integer not null default 0,
+  total_quantity numeric not null default 0,
+  raw_product_json jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  unique (erp_code, product_code)
+);
+
+create index idx_erp_client_products_erp_code
+  on public.erp_client_products (erp_code);
+```
+
+`erp_client_product_lists`
+
+Read-only view for easy Supabase inspection: one row per client with a products
+array. It updates automatically when `erp_client_products` changes.
+
+```sql
+create or replace view public.erp_client_product_lists as
+select
+  c.erp_code,
+  c.client_id,
+  c.name,
+  c.phone,
+  c.normalized_phone,
+  c.email,
+  c.city,
+  c.county,
+  coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'product_id', p.product_id,
+        'product_code', p.product_code,
+        'product_name', p.product_name,
+        'unit', p.unit,
+        'first_ordered_at', p.first_ordered_at,
+        'last_ordered_at', p.last_ordered_at,
+        'times_ordered', p.times_ordered,
+        'total_quantity', p.total_quantity
+      )
+      order by p.last_ordered_at desc nulls last, p.product_name
+    ) filter (where p.id is not null),
+    '[]'::jsonb
+  ) as products
+from public.erp_clients c
+left join public.erp_client_products p
+  on p.erp_code = c.erp_code
+group by c.erp_code, c.client_id, c.name, c.phone, c.normalized_phone, c.email, c.city, c.county;
+```
